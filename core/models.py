@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
 from phonenumber_field.modelfields import PhoneNumberField
+from django.utils import timezone
 
 class Customer(models.Model):
     customer_id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
@@ -11,6 +12,8 @@ class Customer(models.Model):
     age=models.IntegerField()
     approved_limit=models.FloatField(blank=True)
     current_debt=models.FloatField(default=0.0)
+    credit_score = models.IntegerField(null=True, blank=True)
+
 
     def save(self,*args,**kwargs):
         self.approved_limit=self.monthly_salary*36
@@ -27,7 +30,7 @@ class Customer(models.Model):
 
 class Loan(models.Model):
     c_id=models.ForeignKey(Customer,on_delete=models.CASCADE,related_name='loan')
-    loan_id=models.UUIDField(primary_key=True,default=uuid.uuid4,)
+    loan_id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     loan_amount=models.FloatField()
     tenure=models.IntegerField()
     interest_rate=models.FloatField()
