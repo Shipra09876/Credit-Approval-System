@@ -77,6 +77,34 @@ class CheckEligibility(APIView):
     permission_classes = [AllowAny]
     renderer_classes = [JSONRenderer]
 
+    @swagger_auto_schema(
+    operation_description="Check eligibility of a customer for a loan",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['customer_id', 'loan_amount', 'interest_rate', 'tenure'],
+        properties={
+            'customer_id': openapi.Schema(type=openapi.TYPE_STRING),
+            'loan_amount': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'interest_rate': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'tenure': openapi.Schema(type=openapi.TYPE_INTEGER),
+        },
+    ),
+    responses={200: openapi.Response(
+        description="Eligibility Result",
+        schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'customer_id': openapi.Schema(type=openapi.TYPE_STRING),
+                'approval': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                'interest_rate': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'corrected_interest_rate': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'tenure': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'monthly_installment': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'EMI paid on time': openapi.Schema(type=openapi.TYPE_INTEGER),
+            }
+        )
+    )})
+
     def post(self, request):
         customer_id = request.data.get('customer_id')
         loan_amount = float(request.data.get('loan_amount', 0))
@@ -179,6 +207,36 @@ class CreateLoanView(APIView):
     permission_classes=[AllowAny]
     renderer_classes=[JSONRenderer]
 
+    @swagger_auto_schema(
+    operation_description="Create and approve a new loan for a customer",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['customer_id', 'loan_amount', 'interest_rate', 'tenure'],
+        properties={
+            'customer_id': openapi.Schema(type=openapi.TYPE_STRING),
+            'loan_amount': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'interest_rate': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'tenure': openapi.Schema(type=openapi.TYPE_INTEGER),
+        },
+    ),
+    responses={
+        201: openapi.Response(
+            description="Loan Created",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'loan_id': openapi.Schema(type=openapi.TYPE_STRING),
+                    'customer_id': openapi.Schema(type=openapi.TYPE_STRING),
+                    'loan_approved': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'monthly_installment': openapi.Schema(type=openapi.TYPE_NUMBER),
+                }
+            )
+        ),
+        400: "Bad Request",
+        404: "Customer Not Found",
+    })
+
     def post(self, request):
         try:
             customer_id = request.data.get('customer_id')
@@ -189,7 +247,6 @@ class CreateLoanView(APIView):
             # Fetch customer
             customer = Customer.objects.get(customer_id=customer_id)
 
-            # Calculate corrected interest rate
             corrected_interest_rate = interest_rate
 
             if customer.credit_score is not None:
@@ -199,12 +256,10 @@ class CreateLoanView(APIView):
                     corrected_interest_rate = interest_rate + 1
 
 
-            # Calculate monthly installment
             monthly_installment = (
                 loan_amount * (1 + (corrected_interest_rate * tenure / 100)) / tenure
             )
 
-            # Check existing active EMIs
             existing_loans = Loan.objects.filter(c_id=customer, status='active')
             current_emi_sum = sum([loan.monthly_installment for loan in existing_loans])
 
@@ -260,6 +315,32 @@ class CreateLoanView(APIView):
 class LoanDetailView(APIView):
     permission_classes=[AllowAny]
     renderer_classes=[JSONRenderer]
+
+    @swagger_auto_schema(
+    operation_description="Get loan details by loan_id",
+    manual_parameters=[
+        openapi.Parameter(
+            'loan_id', openapi.IN_PATH, description="Loan ID", type=openapi.TYPE_STRING
+        )
+    ],
+    responses={
+        200: openapi.Response(description="Loan Details", schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'loan_id': openapi.Schema(type=openapi.TYPE_STRING),
+                'loan_amount': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'interest_rate': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'monthly_installment': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'repayments_left': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'tenure': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'status': openapi.Schema(type=openapi.TYPE_STRING),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format='date'),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format='date'),
+            }
+        )),
+        404: "Loan Not Found"
+    })
+
     def get(self, request, loan_id):
         try:
             loan = Loan.objects.get(pk=loan_id)
@@ -269,12 +350,41 @@ class LoanDetailView(APIView):
             return Response({"detail": "Loan not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class ViewCustomerLoans(APIView):
-    permission_classes=[AllowAny]
-    renderer_classes=[JSONRenderer]
+    permission_classes = [AllowAny]
+    renderer_classes = [JSONRenderer]
+
+    @swagger_auto_schema(
+    operation_description="Get all loans for a customer by customer_id",
+    manual_parameters=[
+        openapi.Parameter(
+            'customer_id', openapi.IN_PATH, description="Customer ID", type=openapi.TYPE_STRING
+        )
+    ],
+    responses={
+        200: openapi.Response(description="List of Loans", schema=openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'loan_id': openapi.Schema(type=openapi.TYPE_STRING),
+                    'loan_amount': openapi.Schema(type=openapi.TYPE_NUMBER),
+                    'interest_rate': openapi.Schema(type=openapi.TYPE_NUMBER),
+                    'monthly_installment': openapi.Schema(type=openapi.TYPE_NUMBER),
+                    'repayments_left': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'tenure': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'start_date': openapi.Schema(type=openapi.TYPE_STRING, format='date'),
+                    'end_date': openapi.Schema(type=openapi.TYPE_STRING, format='date'),
+                }
+            )
+        )),
+        404: "Loan Not Found"
+    })
+
     def get(self, request, customer_id):
-        loans = Loan.objects.filter(customer__id=customer_id)
+        loans = Loan.objects.filter(c_id__customer_id=customer_id)
         if not loans.exists():
-            return Response({'message': 'No loans found for this customer.'}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response({'detail': 'Loan not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = LoanSerializer(loans, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+

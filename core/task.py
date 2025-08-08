@@ -37,33 +37,37 @@ def import_customer_data(file_path):
 
 
 @shared_task
-
 def import_loan_data(file_path):
-    from core.models import Customer ,Loan
+    from core.models import Customer, Loan
+    import pandas as pd
 
-    df=pd.read_excel(file_path)
-    for _,row in df.iterrows():
-        customer=Customer.objects.get(id=row['Customer ID'])
-        status='past' if row['EMIs paid on Time']>=row['Tenure'] else 'active'
+    df = pd.read_excel(file_path)
 
-        loan=Loan.objects.get_or_create(
-            cid=customer,
-            loan_id=row['Loan ID'],
-            loan_amount=row['Loan Amount'],
-            tenure=row['Tenure'],
-            interest_rate=row['Interest Rate'],
-            monthly_installment=row['Monthly payment'],
-            EMIs_paid_on_time=row['EMIs paid on Time'],
-            status=status,
-            start_date=row['Date of Approval'],
-            end_date=row['End Date']
-        )
+    for _, row in df.iterrows():
+        try:
+            customer = Customer.objects.get(customer_id=row['Customer ID'])
+            status = 'past' if row['EMIs paid on Time'] >= row['Tenure'] else 'active'
 
+            Loan.objects.get_or_create(
+                c_id=customer,
+                loan_id=row['Loan ID'],
+                loan_amount=row['Loan Amount'],
+                tenure=row['Tenure'],
+                interest_rate=row['Interest Rate'],
+                monthly_installment=row['Monthly payment'],
+                EMIs_paid_on_time=row['EMIs paid on Time'],
+                status=status,
+                start_date=row['Date of Approval'],
+                end_date=row['End Date']
+            )
+        except Customer.DoesNotExist:
+            print(f"Customer with ID {row['Customer ID']} does not exist.")
+        except Exception as e:
+            print(f"Error processing loan for {row['Customer ID']}: {e}")
+
+    # Update current debt
     for customer in Customer.objects.all():
-        active_loans=customer.loan_set.filter(status='active')
-        current_debt=sum(loan.loan_amount for loan in active_loans)
-        customer.current_debt=current_debt
+        active_loans = customer.loans.filter(status='active')
+        current_debt = sum(loan.loan_amount for loan in active_loans)
+        customer.current_debt = current_debt
         customer.save()
-
-
-

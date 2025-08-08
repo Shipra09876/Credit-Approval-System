@@ -21,7 +21,7 @@ class Customer(models.Model):
 
         
     def update_curr_debt(self):
-        active_loan=self.loan.filter(status='active')
+        active_loan=self.loans.filter(status='active')
         self.current_debt=sum([loan.remaining_bal() for loan in active_loan])
         self.save()
 
@@ -29,7 +29,7 @@ class Customer(models.Model):
         return f"{self.first_name} - {self.last_name}-{self.monthly_salary} - {self.approved_limit}"
 
 class Loan(models.Model):
-    c_id=models.ForeignKey(Customer,on_delete=models.CASCADE,related_name='loan')
+    c_id=models.ForeignKey(Customer,on_delete=models.CASCADE,related_name='loans')
     loan_id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     loan_amount=models.FloatField()
     tenure=models.IntegerField()
