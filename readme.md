@@ -2,6 +2,10 @@
 
 This is a Django-based Credit Approval System that allows uploading customer data, processing it asynchronously with Celery, managing loans, checking loan eligibility, and viewing details using REST APIs with Swagger documentation
 
+## DEMO Video Link 
+```bash 
+  drive.google.com/file/d/10TXJq97RkB5B81juhbgjo4NST2HT2hF-/view
+```
 
 ## 🐳 Run with Docker
 

@@ -21,7 +21,7 @@ from django.utils import timezone
 from django.db.models import Sum
 from django.db.models.functions import ExtractYear
 from datetime import timedelta
-
+import logging
 
 class Register(APIView):
     permission_classes=[AllowAny]
@@ -380,7 +380,6 @@ class ViewCustomerLoans(APIView):
         )),
         404: "Loan Not Found"
     })
-
     def get(self, request, customer_id):
         loans = Loan.objects.filter(c_id__customer_id=customer_id)
         if not loans.exists():

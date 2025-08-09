@@ -5,7 +5,8 @@ urlpatterns=[
     path("register/",Register.as_view(),name="register"),
     path("check_eligibility/",CheckEligibility.as_view(),name="Check-eligibilty"),
     path("create_loan/",CreateLoanView.as_view(),name="create-loan"),
-    path("view_loan/<uuid:loan_id>/",LoanDetailView.as_view(),name="Loan-details"),
-    path("view_loan/<uuid:customer_id>/",ViewCustomerLoans.as_view(),name="view-customer-loans"),
+    path("view_loan/by-loan/<uuid:loan_id>/", LoanDetailView.as_view(), name="loan-details"),
+    path("view_loan/by-customer/<uuid:customer_id>/", ViewCustomerLoans.as_view(), name="view-customer-loans"),
+
 
 ]
